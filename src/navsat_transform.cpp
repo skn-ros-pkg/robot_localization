@@ -64,6 +64,8 @@ namespace RobotLocalization
     world_frame_id_("odom"),
     base_link_frame_id_("base_link"),
     utm_zone_(""),
+    wgs_to_cartesian_trans_(NULL),
+    cartesian_to_wgs_trans_(NULL),
     tf_listener_(tf_buffer_)
   {
     latest_utm_covariance_.resize(POSE_SIZE, POSE_SIZE);
@@ -72,6 +74,12 @@ namespace RobotLocalization
 
   NavSatTransform::~NavSatTransform()
   {
+    if (wgs_to_cartesian_trans_ != NULL) {
+      OGRCoordinateTransformation::DestroyCT(wgs_to_cartesian_trans_);
+    }
+    if (cartesian_to_wgs_trans_ != NULL) {
+      OGRCoordinateTransformation::DestroyCT(cartesian_to_wgs_trans_);
+    }
   }
 
   void NavSatTransform::run()
@@ -81,7 +89,7 @@ namespace RobotLocalization
     double frequency = 10.0;
     double delay = 0.0;
     double transform_timeout = 0.0;
-
+    int cartesian_coordinates_epsg = 0;
     ros::NodeHandle nh;
     ros::NodeHandle nh_priv("~");
 
@@ -97,8 +105,15 @@ namespace RobotLocalization
     nh_priv.param("frequency", frequency, 10.0);
     nh_priv.param("delay", delay, 0.0);
     nh_priv.param("transform_timeout", transform_timeout, 0.0);
+    nh_priv.param("cartesian_coordinates_epsg", cartesian_coordinates_epsg, 0);
     transform_timeout_.fromSec(transform_timeout);
-
+    if (cartesian_coordinates_epsg != 0) {
+      GDALAllRegister();
+      wgs_.SetWellKnownGeogCS("WGS84");
+      cartesian_srs_.importFromEPSG(cartesian_coordinates_epsg);
+      wgs_to_cartesian_trans_ = OGRCreateCoordinateTransformation(&wgs_, &cartesian_srs_);
+      cartesian_to_wgs_trans_ = OGRCreateCoordinateTransformation(&cartesian_srs_, &wgs_);
+    }
     // Subscribe to the messages and services we need
     ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
@@ -472,8 +487,14 @@ namespace RobotLocalization
 
       double utmX = 0;
       double utmY = 0;
-      std::string utm_zone_tmp;
-      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utm_zone_tmp);
+      if (wgs_to_cartesian_trans_ != NULL) {
+        utmX = msg->longitude;
+        utmY = msg->latitude;
+        wgs_to_cartesian_trans_->Transform(1, &utmX, &utmY);
+      } else {
+        std::string utm_zone_tmp;
+        NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utmY, utmX, utm_zone_tmp);
+      }
       latest_utm_pose_.setOrigin(tf2::Vector3(utmX, utmY, msg->altitude));
       latest_utm_covariance_.setZero();
 
@@ -601,11 +622,17 @@ namespace RobotLocalization
       latest_odom_covariance_ = rot_6d * latest_odom_covariance_.eval() * rot_6d.transpose();
 
       // Now convert the data back to lat/long and place into the message
-      NavsatConversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
-                                 odom_as_utm.getOrigin().getX(),
-                                 utm_zone_,
-                                 filtered_gps.latitude,
-                                 filtered_gps.longitude);
+      if (cartesian_to_wgs_trans_ != NULL) {
+        filtered_gps.longitude = odom_as_utm.getOrigin().getX();
+        filtered_gps.latitude = odom_as_utm.getOrigin().getY();
+        cartesian_to_wgs_trans_->Transform(1, &filtered_gps.longitude, &filtered_gps.latitude);
+      } else {
+        NavsatConversions::UTMtoLL(odom_as_utm.getOrigin().getY(),
+            odom_as_utm.getOrigin().getX(),
+            utm_zone_,
+            filtered_gps.latitude,
+            filtered_gps.longitude);
+      }
       filtered_gps.altitude = odom_as_utm.getOrigin().getZ();
 
       // Copy the measurement's covariance matrix back
@@ -692,7 +719,13 @@ namespace RobotLocalization
   {
     double utm_x = 0;
     double utm_y = 0;
-    NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utm_y, utm_x, utm_zone_);
+    if (wgs_to_cartesian_trans_ != NULL) {
+      utm_x = msg->longitude;
+      utm_y = msg->latitude;
+      wgs_to_cartesian_trans_->Transform(1, &utm_x, &utm_y);
+    } else {
+      NavsatConversions::LLtoUTM(msg->latitude, msg->longitude, utm_y, utm_x, utm_zone_);
+    }
 
     ROS_INFO_STREAM("Datum (latitude, longitude, altitude) is (" << std::fixed << msg->latitude << ", " <<
                     msg->longitude << ", " << msg->altitude << ")");

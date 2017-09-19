@@ -31,6 +31,8 @@ if(NOT EIGEN3_FOUND)
   set(EIGEN_PACKAGE Eigen)
 endif()
 
+find_package(GDAL 2.0 REQUIRED)
+
 add_definitions(-DEIGEN_NO_DEBUG -DEIGEN_MPL2_ONLY)
 
 roslint_cpp()
@@ -81,14 +83,14 @@ catkin_package(
     tf2_geometry_msgs
     tf2_ros
     xmlrpcpp
-  DEPENDS ${EIGEN_PACKAGE}
+  DEPENDS ${EIGEN_PACKAGE} GDAL
 )
 
 ###########
 ## Build ##
 ###########
 
-include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS} ${GDAL_INCLUDE_DIR})
 
 # Library definitions
 add_library(filter_utilities src/filter_utilities.cpp)
@@ -126,7 +128,7 @@ target_link_libraries(ros_robot_localization_listener robot_localization_estimat
 target_link_libraries(robot_localization_listener_node ros_robot_localization_listener ${catkin_LIBRARIES})
 target_link_libraries(ekf_localization_node ros_filter ${catkin_LIBRARIES})
 target_link_libraries(ukf_localization_node ros_filter ${catkin_LIBRARIES})
-target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES} ${GDAL_LIBRARY})
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES})
 
 #############

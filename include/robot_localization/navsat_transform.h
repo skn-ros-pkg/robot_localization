@@ -50,6 +50,12 @@
 
 #include <string>
 
+#include "gdal_priv.h"
+#include "gdal.h"
+#include "gdal_alg.h"
+#include "ogrsf_frmts.h"
+
+
 namespace RobotLocalization
 {
 
@@ -279,6 +285,8 @@ class NavSatTransform
     //! If this parameter is true, we always report 0 for the altitude of the converted GPS odometry message.
     //!
     bool zero_altitude_;
+    OGRSpatialReference wgs_, cartesian_srs_;
+    OGRCoordinateTransformation *wgs_to_cartesian_trans_, *cartesian_to_wgs_trans_;
 };
 
 }  // namespace RobotLocalization
