@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslint
   sensor_msgs
   std_msgs
+  std_srvs
   tf2
   tf2_geometry_msgs
   tf2_ros
@@ -79,6 +80,7 @@ catkin_package(
     roscpp
     sensor_msgs
     std_msgs
+    std_srvs
     tf2
     tf2_geometry_msgs
     tf2_ros
@@ -159,8 +161,10 @@ install(DIRECTORY include/${PROJECT_NAME}/
 
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-  FILES_MATCHING PATTERN "*.launch"
-  PATTERN ".svn" EXCLUDE)
+  FILES_MATCHING PATTERN "*.launch")
+
+install(DIRECTORY params/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params)
 
 install(FILES
   LICENSE
