@@ -109,6 +109,10 @@ namespace RosFilterUtilities
     {
       tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, time, timeout).transform,
                    targetFrameTrans);
+      if (sourceFrame == "coms/gps") {
+        ROS_WARN_STREAM_NAMED("robot_localization", "Fetching tf from " << sourceFrame << " to " << targetFrame <<
+                                        " Succeeded!\n");
+      }
     }
     catch (tf2::TransformException &ex)
     {
@@ -120,7 +124,8 @@ namespace RosFilterUtilities
         tf2::fromMsg(buffer.lookupTransform(targetFrame, sourceFrame, ros::Time(0)).transform,
                      targetFrameTrans);
 
-        ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
+        //ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << sourceFrame << " to " << targetFrame <<
+        ROS_WARN_STREAM("Transform from " << sourceFrame << " to " << targetFrame <<
                                       " was unavailable for the time requested. Using latest instead.\n");
       }
       catch(tf2::TransformException &ex)

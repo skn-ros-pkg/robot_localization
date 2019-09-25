@@ -34,6 +34,7 @@
 #define ROBOT_LOCALIZATION_NAVSAT_TRANSFORM_H
 
 #include <robot_localization/SetDatum.h>
+#include <std_srvs/Trigger.h>
 
 #include <ros/ros.h>
 
@@ -82,6 +83,8 @@ class NavSatTransform
     //! @brief Callback for the datum service
     //!
     bool datumCallback(robot_localization::SetDatum::Request& request, robot_localization::SetDatum::Response&);
+
+    bool triggerTransformInitialization(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response);
 
     //! @brief Given the pose of the navsat sensor in the UTM frame, removes the offset from the vehicle's centroid
     //! and returns the UTM-frame pose of said centroid.

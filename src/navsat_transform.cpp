@@ -115,6 +115,7 @@ namespace RobotLocalization
       cartesian_to_wgs_trans_ = OGRCreateCoordinateTransformation(&cartesian_srs_, &wgs_);
     }
     // Subscribe to the messages and services we need
+    ros::ServiceServer trigger_srv = nh_priv.advertiseService("trigger", &NavSatTransform::triggerTransformInitialization, this);
     ros::ServiceServer datum_srv = nh.advertiseService("datum", &NavSatTransform::datumCallback, this);
 
     if (use_manual_datum_ && nh_priv.hasParam("datum"))
@@ -321,6 +322,17 @@ namespace RobotLocalization
         utm_broadcaster_.sendTransform(utm_transform_stamped);
       }
     }
+  }
+
+  bool NavSatTransform::triggerTransformInitialization(std_srvs::Trigger::Request& request,
+      std_srvs::Trigger::Response& response)
+  {
+    transform_good_ = false;
+    has_transform_odom_ = false;
+    has_transform_gps_ = false;
+    has_transform_imu_ = false;
+    response.success = true;
+    return true;
   }
 
   bool NavSatTransform::datumCallback(robot_localization::SetDatum::Request& request,
@@ -670,6 +682,7 @@ namespace RobotLocalization
 
       // Set header information stamp because we would like to know the robot's position at that timestamp
       gps_odom.header.frame_id = world_frame_id_;
+      gps_odom.child_frame_id = base_link_frame_id_;
       gps_odom.header.stamp = gps_update_time_;
 
       // Want the pose of the vehicle origin, not the GPS
@@ -755,6 +768,28 @@ namespace RobotLocalization
       imu->header.stamp = msg->header.stamp;
       sensor_msgs::ImuConstPtr imuPtr(imu);
       imuCallback(imuPtr);
+      //   tf2::Transform t_odom_to_map;
+      //   bool can_transform = RosFilterUtilities::lookupTransformSafe(tf_buffer_,
+      //       "utm",
+      //       msg->header.frame_id,
+      //       msg->header.stamp,
+      //       ros::Duration(transform_timeout_),
+      //       t_odom_to_map);
+      //   if (can_transform) {
+      //     sensor_msgs::Imu *imu = new sensor_msgs::Imu();
+      //     tf2::Quaternion odom_quat;
+      //     tf2::fromMsg(msg->pose.pose.orientation, odom_quat);
+      //     imu->orientation = tf2::toMsg(t_odom_to_map.getRotation() * odom_quat);
+
+      //     //imu->orientation = msg->pose.pose.orientation;
+      //     imu->header.frame_id = msg->child_frame_id;
+      //     imu->header.stamp = msg->header.stamp;
+      //     sensor_msgs::ImuConstPtr imuPtr(imu);
+      //     imuCallback(imuPtr);
+      //     std::cout << "!!!!!!!!!!!!!!!!!!!!!!! orientation: " << imu->orientation.x << " " << imu->orientation.y << " " << imu->orientation.z << " " << imu->orientation.w << std::endl;
+      //   } else {
+      //     std::cout << "!!!!!!!!!!!!!!!!!!!!!!! cannot get transform from map to odom"  << std::endl;
+      //   }
     }
   }
 

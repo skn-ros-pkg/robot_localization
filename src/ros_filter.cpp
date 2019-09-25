@@ -351,6 +351,9 @@ namespace RobotLocalization
       message.header.stamp = ros::Time(filter_.getLastMeasurementTime());
       message.header.frame_id = worldFrameId_;
       message.child_frame_id = baseLinkFrameId_;
+      RF_DEBUG("ROSFILTER IS INITIALIZED!!!!!\n");
+    } else {
+      RF_DEBUG(">> ROSFILTER IS not INITIALIZED!!!!!\n");
     }
 
     return filter_.getInitializedStatus();
@@ -1821,6 +1824,10 @@ namespace RobotLocalization
           }
           else if (filteredPosition.header.frame_id == mapFrameId_)
           {
+            /// shohei: directly publish tf from world to base_link
+            /// worldTransformBroadcaster.sendTransform(worldBaseLinkTransMsg_);
+            /// end of edit
+
             try
             {
               tf2::Transform worldBaseLinkTrans;
